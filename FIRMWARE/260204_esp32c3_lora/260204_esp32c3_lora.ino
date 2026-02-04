@@ -1,4 +1,4 @@
-/*
+set/*
    PROJECT: LoRa Morse Messenger (2026)
    HARDWARE: Integrated ESP32-C3 SUPERMINI + Ra-02 (433MHz)
    LIBRARY: LiquidCrystal_I2C by Frank de Brabander
@@ -280,6 +280,15 @@ void handleIncomingLora() {
     }
     incoming[idx] = '\0';  // Null terminate
     rxCount++;
+
+    // Print raw hex dump for debugging
+    Serial.print(F("[RX] Raw hex: "));
+    for (int i = 0; i < idx; i++) {
+      if (incoming[i] < 0x10) Serial.print('0');
+      Serial.print((uint8_t)incoming[i], HEX);
+      Serial.print(' ');
+    }
+    Serial.println();
 
     Serial.print(F("[RX] Raw morse: \""));
     Serial.print(incoming);
