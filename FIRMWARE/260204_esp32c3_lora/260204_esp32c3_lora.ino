@@ -29,35 +29,11 @@ const long BAND = 433E6;
 const int MAX_SERIAL_BUF = 100;  // Prevent buffer overflow
 const int MAX_MESSAGE_LEN = 256; // Max message length
 
-// --- MORSE LOOKUP TABLES (Stored in Flash Memory) ---
+// --- MORSE LOOKUP TABLE (Stored in Flash Memory) ---
 const char* const morse_alpha[] PROGMEM = {
   ".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..", ".---", "-.-", ".-..", "--",
   "-.", "---", ".--.", "--.-", ".-.", "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--.."
 };
-
-const char* const morse_digits[] PROGMEM = {
-  "-----", ".----", "..---", "...--", "....-", ".....", "-....", "--...", "---..", "----."
-};
-
-// Punctuation uses parallel arrays (chars aren't sequential)
-const char morse_punct_chars[] PROGMEM = ".,?'!:;-()\"@=+";
-const char* const morse_punct_codes[] PROGMEM = {
-  ".-.-.-",   // . period
-  "--..--",   // , comma
-  "..--..",   // ? question
-  ".----.",   // ' apostrophe
-  "-.-.--",   // ! exclamation
-  "---...",   // : colon
-  "-.-.-.",   // ; semicolon
-  "-....-",   // - hyphen
-  "-.--.",    // ( open paren
-  "-.--.-",   // ) close paren
-  ".-..-.",   // " quote
-  ".--.-.",   // @ at sign
-  "-...-",    // = equals
-  ".-.-."     // + plus
-};
-const int PUNCT_COUNT = 14;
 
 // --- OBJECTS ---
 LiquidCrystal_I2C lcd(0x27, 20, 4);
@@ -85,18 +61,18 @@ void setup() {
   Serial.println(F("[SETUP] Configuring GPIO pins..."));
   pinMode(TX_LED, OUTPUT);
   pinMode(RX_LED, OUTPUT);
-  digitalWrite(TX_LED, LOW);
-  digitalWrite(RX_LED, LOW);
+  digitalWrite(TX_LED, HIGH);
+  digitalWrite(RX_LED, HIGH);
   Serial.println(F("[SETUP] GPIO configured: TX_LED=2, RX_LED=3"));
 
   // --- LED TEST ---
   Serial.println(F("[SETUP] Testing LEDs..."));
-  digitalWrite(TX_LED, HIGH);
-  delay(200);
   digitalWrite(TX_LED, LOW);
-  digitalWrite(RX_LED, HIGH);
   delay(200);
+  digitalWrite(TX_LED, HIGH);
   digitalWrite(RX_LED, LOW);
+  delay(200);
+  digitalWrite(RX_LED, HIGH);
   Serial.println(F("[SETUP] LED test complete"));
 
   // --- LCD INITIALIZATION ---
@@ -160,8 +136,7 @@ void setup() {
   Serial.println(F("[SETUP] System Ready!"));
   Serial.println(F("[SETUP] ========================================"));
   Serial.println(F("[INFO] Type text and press ENTER to transmit"));
-  Serial.println(F("[INFO] Morse encoding: A-Z, 0-9, punctuation"));
-  Serial.println(F("[INFO] Punctuation: . , ? ' ! : ; - ( ) \" @ = +"));
+  Serial.println(F("[INFO] Morse encoding: A-Z, spaces as '/'"));
   Serial.println(F("[INFO] Max message length: 100 characters"));
   Serial.println(F(""));
 }
@@ -211,7 +186,7 @@ void transmitMorse(String text) {
   
   // Pre-allocate string to reduce fragmentation
   String out = "";
-  out.reserve(text.length() * 8);  // Worst case: 7 chars per symbol + space
+  out.reserve(text.length() * 6);  // Worst case: 6 chars per letter
   
   text.toUpperCase();
   Serial.print(F("[TX] Uppercase: \""));
@@ -228,55 +203,23 @@ void transmitMorse(String text) {
       out += buffer;
       out += " ";
       charCount++;
-
+      
       // Debug: Show each character conversion
       Serial.print(F("[TX] '"));
       Serial.print(text[i]);
       Serial.print(F("' -> "));
       Serial.println(buffer);
-
-    } else if (text[i] >= '0' && text[i] <= '9') {
-      char buffer[10];
-      strcpy_P(buffer, (char*)pgm_read_ptr(&(morse_digits[text[i] - '0'])));
-      out += buffer;
-      out += " ";
-      charCount++;
-
-      // Debug: Show each digit conversion
-      Serial.print(F("[TX] '"));
-      Serial.print(text[i]);
-      Serial.print(F("' -> "));
-      Serial.println(buffer);
-
+      
     } else if (text[i] == ' ') {
       out += "/ ";
       Serial.println(F("[TX] ' ' -> / (word space)"));
     } else {
-      // Check punctuation
-      bool foundPunct = false;
-      for (int p = 0; p < PUNCT_COUNT; p++) {
-        if (text[i] == (char)pgm_read_byte(&morse_punct_chars[p])) {
-          char buffer[10];
-          strcpy_P(buffer, (char*)pgm_read_ptr(&(morse_punct_codes[p])));
-          out += buffer;
-          out += " ";
-          charCount++;
-          foundPunct = true;
-          Serial.print(F("[TX] '"));
-          Serial.print(text[i]);
-          Serial.print(F("' -> "));
-          Serial.println(buffer);
-          break;
-        }
-      }
-      if (!foundPunct) {
-        unknownChars++;
-        Serial.print(F("[WARN] Unknown character: '"));
-        Serial.print(text[i]);
-        Serial.print(F("' (ASCII: "));
-        Serial.print((int)text[i]);
-        Serial.println(F(") - skipped"));
-      }
+      unknownChars++;
+      Serial.print(F("[WARN] Unknown character: '"));
+      Serial.print(text[i]);
+      Serial.print(F("' (ASCII: "));
+      Serial.print((int)text[i]);
+      Serial.println(F(") - skipped"));
     }
   }
 
@@ -291,8 +234,8 @@ void transmitMorse(String text) {
   Serial.print(out.length());
   Serial.println(F(" chars"));
 
-  // Non-blocking TX indicator
-  digitalWrite(TX_LED, HIGH);
+  // Non-blocking TX indicator (active-low)
+  digitalWrite(TX_LED, LOW);
   txTime = millis();
 
   // Transmit
@@ -325,7 +268,7 @@ void handleIncomingLora() {
     Serial.println(F(" bytes"));
     
     // Non-blocking RX indicator
-    digitalWrite(RX_LED, HIGH);
+    digitalWrite(RX_LED, LOW);
     rxTime = millis();
 
     // Read incoming data into fixed buffer
@@ -398,7 +341,7 @@ String decodeMorse(String morse) {
   for (int i = 0; i < morse.length(); i++) {
     if (morse[i] == ' ') {
       if (symbol.length() > 0) {
-        // Look up the symbol in letters
+        // Look up the symbol
         bool found = false;
         for (int j = 0; j < 26; j++) {
           char buffer[10];
@@ -414,44 +357,6 @@ String decodeMorse(String morse) {
             Serial.print(letter);
             Serial.println(F("'"));
             break;
-          }
-        }
-        // Look up the symbol in digits if not found
-        if (!found) {
-          for (int j = 0; j < 10; j++) {
-            char buffer[10];
-            strcpy_P(buffer, (char*)pgm_read_ptr(&(morse_digits[j])));
-            if (symbol.equals(buffer)) {
-              char digit = '0' + j;
-              decoded += digit;
-              symbolsDecoded++;
-              found = true;
-              Serial.print(F("[DECODE] \""));
-              Serial.print(symbol);
-              Serial.print(F("\" -> '"));
-              Serial.print(digit);
-              Serial.println(F("'"));
-              break;
-            }
-          }
-        }
-        // Look up the symbol in punctuation if not found
-        if (!found) {
-          for (int p = 0; p < PUNCT_COUNT; p++) {
-            char buffer[10];
-            strcpy_P(buffer, (char*)pgm_read_ptr(&(morse_punct_codes[p])));
-            if (symbol.equals(buffer)) {
-              char punct = (char)pgm_read_byte(&morse_punct_chars[p]);
-              decoded += punct;
-              symbolsDecoded++;
-              found = true;
-              Serial.print(F("[DECODE] \""));
-              Serial.print(symbol);
-              Serial.print(F("\" -> '"));
-              Serial.print(punct);
-              Serial.println(F("'"));
-              break;
-            }
           }
         }
         if (!found) {
@@ -492,44 +397,6 @@ String decodeMorse(String morse) {
         break;
       }
     }
-    // Look up the symbol in digits if not found
-    if (!found) {
-      for (int j = 0; j < 10; j++) {
-        char buffer[10];
-        strcpy_P(buffer, (char*)pgm_read_ptr(&(morse_digits[j])));
-        if (symbol.equals(buffer)) {
-          char digit = '0' + j;
-          decoded += digit;
-          symbolsDecoded++;
-          found = true;
-          Serial.print(F("[DECODE] \""));
-          Serial.print(symbol);
-          Serial.print(F("\" -> '"));
-          Serial.print(digit);
-          Serial.println(F("'"));
-          break;
-        }
-      }
-    }
-    // Look up the symbol in punctuation if not found
-    if (!found) {
-      for (int p = 0; p < PUNCT_COUNT; p++) {
-        char buffer[10];
-        strcpy_P(buffer, (char*)pgm_read_ptr(&(morse_punct_codes[p])));
-        if (symbol.equals(buffer)) {
-          char punct = (char)pgm_read_byte(&morse_punct_chars[p]);
-          decoded += punct;
-          symbolsDecoded++;
-          found = true;
-          Serial.print(F("[DECODE] \""));
-          Serial.print(symbol);
-          Serial.print(F("\" -> '"));
-          Serial.print(punct);
-          Serial.println(F("'"));
-          break;
-        }
-      }
-    }
     if (!found) {
       decoded += '?';
       symbolsFailed++;
@@ -551,10 +418,10 @@ String decodeMorse(String morse) {
 
 void manageStatusLeds() {
   if (millis() - txTime > LED_DUR) {
-    digitalWrite(TX_LED, LOW);
+    digitalWrite(TX_LED, HIGH);
   }
   if (millis() - rxTime > LED_DUR) {
-    digitalWrite(RX_LED, LOW);
+    digitalWrite(RX_LED, HIGH);
   }
 }
 
