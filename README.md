@@ -2,11 +2,20 @@
 
 A wireless text communication system that encodes messages as Morse code and transmits them via LoRa radio at 433MHz.
 
+## Block Diagram
+
+![Block Diagram](TOOLS/ESP32C3_LORA.pdf)
+
+See [TOOLS/ESP32C3_LORA.pdf](TOOLS/ESP32C3_LORA.pdf) for the full system block diagram.
+
 ## Hardware
 
 - **MCU:** ESP32-C3 SUPERMINI with integrated Ra-02 LoRa module
+- **Radio:** LoRa Ra-02 (433MHz) powered from ESP32 3.3V output
 - **Display:** 20x4 I2C LCD (address 0x27)
 - **Indicators:** TX and RX status LEDs
+- **Power:** 18650 battery with boost converter to 5V, or USB
+- **Charging:** USB charger module with diode isolation
 
 ### Pin Connections
 
