@@ -251,7 +251,10 @@ void transmitMorse(String text) {
   lcd.setCursor(0, 1);
   lcd.print(F("TX:                 "));
   lcd.setCursor(4, 1);
-  lcd.print(text.substring(0, 16));
+  for (int i = 0; i < 16 && i < text.length(); i++) {
+    char c = text[i];
+    lcd.print((c >= 0x20 && c <= 0x7E) ? c : '?');
+  }
   lcd.setCursor(0, 2);
   lcd.print(F("                    "));
   lcd.setCursor(0, 2);
@@ -313,27 +316,36 @@ void handleIncomingLora() {
     Serial.print(snr);
     Serial.println(F(" dB"));
 
-    // Update LCD - Line 1: Decoded text
+    // Update LCD - Line 1: Decoded text (filter non-printable chars)
     lcd.setCursor(0, 1);
     lcd.print(F("RX:                 "));
     lcd.setCursor(4, 1);
-    lcd.print(decoded.substring(0, 16));
+    for (int i = 0; i < 16 && i < decoded.length(); i++) {
+      char c = decoded[i];
+      lcd.print((c >= 0x20 && c <= 0x7E) ? c : '?');
+    }
 
-    // Update LCD - Line 2: Morse code
+    // Update LCD - Line 2: Morse code (only print valid morse chars)
     lcd.setCursor(0, 2);
     lcd.print(F("                    "));
     lcd.setCursor(0, 2);
-    for (int i = 0; i < 20 && incoming[i] != '\0'; i++) {
-      lcd.print(incoming[i]);
+    for (int i = 0, col = 0; i < idx && col < 20; i++) {
+      char c = incoming[i];
+      // Only print valid Morse characters: . - / and space
+      if (c == '.' || c == '-' || c == '/' || c == ' ') {
+        lcd.print(c);
+        col++;
+      }
     }
 
-    // Update LCD - Line 3: RSSI
+    // Update LCD - Line 3: RSSI (clear line first)
+    lcd.setCursor(0, 3);
+    lcd.print(F("                    "));
     lcd.setCursor(0, 3);
     lcd.print(F("RSSI:"));
     lcd.print(rssi);
-    lcd.print(F("dBm SNR:"));
+    lcd.print(F(" SNR:"));
     lcd.print(snr, 1);
-    lcd.print(F("  "));
 
     Serial.println(F("[RX] ===== RECEPTION END =====\n"));
   }
