@@ -1,4 +1,4 @@
-set/*
+/*
    PROJECT: LoRa Morse Messenger (2026)
    HARDWARE: Integrated ESP32-C3 SUPERMINI + Ra-02 (433MHz)
    LIBRARY: LiquidCrystal_I2C by Frank de Brabander
