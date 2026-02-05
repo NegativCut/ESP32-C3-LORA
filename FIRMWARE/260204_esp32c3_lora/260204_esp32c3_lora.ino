@@ -293,6 +293,30 @@ void handleIncomingLora() {
     }
     Serial.println();
 
+    // Validate packet - must contain only valid Morse chars
+    bool validPacket = (idx > 0);
+    int invalidChars = 0;
+    for (int i = 0; i < idx; i++) {
+      char c = incoming[i];
+      if (c != '.' && c != '-' && c != ' ' && c != '/') {
+        invalidChars++;
+      }
+    }
+    // Reject if more than 10% invalid characters
+    if (invalidChars > 0 && (invalidChars * 100 / idx) > 10) {
+      validPacket = false;
+    }
+
+    if (!validPacket) {
+      Serial.print(F("[RX] REJECTED: Invalid packet ("));
+      Serial.print(invalidChars);
+      Serial.print(F("/"));
+      Serial.print(idx);
+      Serial.println(F(" bad chars) - likely noise"));
+      Serial.println(F("[RX] ===== RECEPTION END =====\n"));
+      return;
+    }
+
     Serial.print(F("[RX] Raw morse: \""));
     Serial.print(incoming);
     Serial.println(F("\""));
