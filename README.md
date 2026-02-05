@@ -4,8 +4,6 @@ A wireless text communication system that encodes messages as Morse code and tra
 
 ## Block Diagram
 
-![Block Diagram](TOOLS/ESP32C3_LORA.pdf)
-
 See [TOOLS/ESP32C3_LORA.pdf](TOOLS/ESP32C3_LORA.pdf) for the full system block diagram.
 
 ## Hardware
@@ -13,7 +11,7 @@ See [TOOLS/ESP32C3_LORA.pdf](TOOLS/ESP32C3_LORA.pdf) for the full system block d
 - **MCU:** ESP32-C3 SUPERMINI with integrated Ra-02 LoRa module
 - **Radio:** LoRa Ra-02 (433MHz) powered from ESP32 3.3V output
 - **Display:** 20x4 I2C LCD (address 0x27)
-- **Indicators:** TX and RX status LEDs
+- **Indicators:** TX and RX status LEDs (active-low)
 - **Power:** 18650 battery with boost converter to 5V, or USB
 - **Charging:** USB charger module with diode isolation
 
@@ -24,8 +22,8 @@ See [TOOLS/ESP32C3_LORA.pdf](TOOLS/ESP32C3_LORA.pdf) for the full system block d
 | LoRa CS | GPIO 7 |
 | LoRa RST | GPIO 10 |
 | LoRa DIO0 | GPIO 1 |
-| TX LED | GPIO 2 |
-| RX LED | GPIO 3 |
+| TX LED | GPIO 2 (active-low) |
+| RX LED | GPIO 3 (active-low) |
 | I2C SDA | GPIO 8 |
 | I2C SCL | GPIO 9 |
 
@@ -35,13 +33,12 @@ See [TOOLS/ESP32C3_LORA.pdf](TOOLS/ESP32C3_LORA.pdf) for the full system block d
 - Real-time Morse encoding and decoding
 - LCD display showing TX/RX messages and signal quality (RSSI/SNR)
 - Non-blocking design for responsive operation
-- Debug output via Serial (9600 baud)
+- Packet validation rejects noise/garbage (>10% invalid chars)
+- Debug output via Serial (9600 baud) with raw hex dump
 
 ## Supported Characters
 
 - **Letters:** A-Z (case insensitive)
-- **Digits:** 0-9
-- **Punctuation:** `. , ? ' ! : ; - ( ) " @ = +`
 - **Spaces:** Encoded as `/` in Morse
 
 ## Usage
@@ -51,6 +48,15 @@ See [TOOLS/ESP32C3_LORA.pdf](TOOLS/ESP32C3_LORA.pdf) for the full system block d
 3. Type a message and press Enter to transmit
 4. Incoming messages are automatically decoded and displayed
 
+### Debug Output
+
+The serial monitor shows detailed debug information:
+- Raw hex dump of received packets
+- Morse encoding/decoding steps
+- RSSI and SNR signal quality
+- Packet validation results
+- System statistics every 30 seconds
+
 ## Libraries Required
 
 - [LoRa](https://github.com/sandeepmistry/arduino-LoRa) by Sandeep Mistry
@@ -58,7 +64,11 @@ See [TOOLS/ESP32C3_LORA.pdf](TOOLS/ESP32C3_LORA.pdf) for the full system block d
 
 ## LoRa Parameters
 
-- Frequency: 433 MHz
-- Spreading Factor: 7
-- Bandwidth: 125 kHz
-- Coding Rate: 4/5
+| Parameter | Value |
+|-----------|-------|
+| Frequency | 433 MHz |
+| Spreading Factor | 7 |
+| Bandwidth | 125 kHz |
+| Coding Rate | 4/5 |
+
+Devices must use identical parameters to communicate.
