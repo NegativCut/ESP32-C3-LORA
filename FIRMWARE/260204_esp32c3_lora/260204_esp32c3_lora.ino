@@ -43,6 +43,8 @@ String serialBuf = "";
 unsigned long txTime = 0;
 unsigned long rxTime = 0;
 unsigned long lastDebugPrint = 0;
+unsigned long lastHeartbeat = 0;
+bool heartbeatState = false;
 
 // --- STATISTICS FOR DEBUGGING ---
 unsigned int txCount = 0;
@@ -145,11 +147,21 @@ void loop() {
   handleSerialInput();
   handleIncomingLora();
   manageStatusLeds();
-  
-  // Periodic heartbeat for debugging
+  updateHeartbeat();
+
+  // Periodic statistics for debugging
   if (millis() - lastDebugPrint > 30000) {  // Every 30 seconds
     printStatistics();
     lastDebugPrint = millis();
+  }
+}
+
+void updateHeartbeat() {
+  if (millis() - lastHeartbeat > 500) {  // Toggle every 500ms
+    lastHeartbeat = millis();
+    heartbeatState = !heartbeatState;
+    lcd.setCursor(19, 0);
+    lcd.print(heartbeatState ? '*' : ' ');
   }
 }
 
